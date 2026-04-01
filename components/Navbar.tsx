@@ -16,7 +16,7 @@ const Navbar = () => {
 			}
 			return;
 		}
-		
+
 		try {
 			await signIn();
 		} catch (e) {
