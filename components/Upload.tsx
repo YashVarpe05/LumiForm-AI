@@ -2,8 +2,6 @@ import { CheckCircle2, ImageIcon, UploadIcon } from "lucide-react";
 import React, { useEffect, useRef, useState } from "react";
 import { useOutletContext } from "react-router";
 import {
-	MAX_FILE_SIZE_BYTES,
-	MAX_FILE_SIZE_MB,
 	PROGRESS_INTERVAL_MS,
 	PROGRESS_STEP,
 	REDIRECT_DELAY_MS,
@@ -17,7 +15,6 @@ const Upload = ({ onComplete }: UploadProps) => {
 	const [file, setFile] = useState<File | null>(null);
 	const [isDragging, setIsDragging] = useState(false);
 	const [progress, setProgress] = useState(0);
-	const [error, setError] = useState<string | null>(null);
 	const progressIntervalRef = useRef<number | null>(null);
 	const completeTimeoutRef = useRef<number | null>(null);
 
@@ -44,12 +41,6 @@ const Upload = ({ onComplete }: UploadProps) => {
 	const processFile = (selectedFile: File) => {
 		if (!isSignedIn) return;
 
-		if (selectedFile.size > MAX_FILE_SIZE_BYTES) {
-			setError(`File exceeds the ${MAX_FILE_SIZE_MB} MB size limit.`);
-			return;
-		}
-
-		setError(null);
 		clearTimers();
 		setFile(selectedFile);
 		setProgress(0);
@@ -83,7 +74,6 @@ const Upload = ({ onComplete }: UploadProps) => {
 
 					base64Promise
 						.then((base64Data) => {
-							setProgress(100);
 							completeTimeoutRef.current = window.setTimeout(() => {
 								onComplete?.(base64Data);
 							}, REDIRECT_DELAY_MS);
@@ -92,8 +82,6 @@ const Upload = ({ onComplete }: UploadProps) => {
 							setFile(null);
 							setProgress(0);
 						});
-
-					return 99;
 				}
 
 				return nextProgress;
@@ -165,8 +153,7 @@ const Upload = ({ onComplete }: UploadProps) => {
 								? "Click to upload or just drag and drop"
 								: "Sign in or sign up with Puter to upload"}
 						</p>
-					<p className="help">Maximum file size {MAX_FILE_SIZE_MB} MB.</p>
-					{error && <p className="help" style={{ color: "red" }}>{error}</p>}
+						<p className="help">Maximum file size 50 MB.</p>
 					</div>
 				</div>
 			) : (
