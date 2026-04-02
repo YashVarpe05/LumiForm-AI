@@ -44,20 +44,17 @@ const Upload = ({ onComplete }: UploadProps) => {
 	const processFile = (selectedFile: File) => {
 		if (!isSignedIn) return;
 
-		const processFile = (selectedFile: File) => {
-			if (!isSignedIn) return;
+		clearTimers();
 
-			clearTimers();
+		if (selectedFile.size > MAX_FILE_SIZE_BYTES) {
+			setError(`File is too large. Maximum size is ${MAX_FILE_SIZE_MB}MB.`);
+			setFile(null);
+			setProgress(0);
+			return;
+		}
 
-			if (selectedFile.size > MAX_FILE_SIZE_BYTES) {
-				setError(`File is too large. Maximum size is ${MAX_FILE_SIZE_MB}MB.`);
-				setFile(null);
-				setProgress(0);
-				return;
-			}
-
-			setError(null);
-			setFile(selectedFile);		setFile(selectedFile);
+		setError(null);
+		setFile(selectedFile);
 		setProgress(0);
 
 		const base64Promise = new Promise<string>((resolve, reject) => {
@@ -171,7 +168,10 @@ const Upload = ({ onComplete }: UploadProps) => {
 								: "Sign in or sign up with Puter to upload"}
 						</p>
 						{error ? (
-							<p className="help" style={{ color: "#ef4444", fontWeight: "600" }}>
+							<p
+								className="help"
+								style={{ color: "#ef4444", fontWeight: "600" }}
+							>
 								{error}
 							</p>
 						) : (
@@ -180,7 +180,9 @@ const Upload = ({ onComplete }: UploadProps) => {
 					</div>
 				</div>
 			) : (
-				<div className={`upload-status ${progress === 100 ? "is-complete" : ""}`}>
+				<div
+					className={`upload-status ${progress === 100 ? "is-complete" : ""}`}
+				>
 					<div className="status-content">
 						<div className="status-icon">
 							{progress === 100 ? (
@@ -202,5 +204,4 @@ const Upload = ({ onComplete }: UploadProps) => {
 		</div>
 	);
 };
-
 export default Upload;
