@@ -62,8 +62,6 @@ export default function Home() {
 		localStorage.setItem(`visualizer:image:${newId}`, base64Image);
 		navigate(`/visualizer/${newId}`, {
 			state: {
-				initialImage: saved.sourceImage,
-				initialRendered: saved.renderedImage || null,
 				name,
 			},
 		});
