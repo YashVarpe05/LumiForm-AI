@@ -57,7 +57,7 @@ export default function Home() {
 			console.error("failed to create project");
 			return false;
 		}
-		setProjects((prev) => [newItem, ...prev]);
+		setProjects((prev) => [saved, ...prev]);
 
 		localStorage.setItem(`visualizer:image:${newId}`, base64Image);
 		navigate(`/visualizer/${newId}`, {
