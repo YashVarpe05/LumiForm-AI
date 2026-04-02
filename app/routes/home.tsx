@@ -17,6 +17,7 @@ export default function Home() {
 
 	const handleUploadComplete = async (base64Image: string) => {
 		const newId = Date.now().toString();
+		localStorage.setItem(`visualizer:image:${newId}`, base64Image);
 		navigate(`/visualizer/${newId}`);
 		return true;
 	};
@@ -53,7 +54,7 @@ export default function Home() {
 								<Layers className="icon" />
 							</div>
 							<h3>Upload your floor plan</h3>
-							<p>Supports JPG, PNG, formats up to 10MB</p>
+							<p>Supports JPG, PNG, formats up to 50MB</p>
 						</div>
 						<Upload onComplete={handleUploadComplete} />
 					</div>
