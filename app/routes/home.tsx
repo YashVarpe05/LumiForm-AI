@@ -4,7 +4,8 @@ import { ArrowRight, ArrowUpRight, Clock, Layers } from "lucide-react";
 import Button from "components/ui/Button";
 import Upload from "components/Upload";
 import { useNavigate } from "react-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import puter from "@heyputer/puter.js";
 import { createProject } from "lib/puter.action";
 
 export function meta({}: Route.MetaArgs) {
@@ -18,6 +19,27 @@ export default function Home() {
 	const navigate = useNavigate();
 
 	const [projects, setProjects] = useState<DesignItem[]>([]);
+
+	useEffect(() => {
+		const loadProjects = async () => {
+			try {
+				const items = await puter.kv.list("project:*", true);
+				const loaded = items
+					.map((item: any) => {
+						try {
+							return JSON.parse(item.value) as DesignItem;
+						} catch {
+							return null;
+						}
+					})
+					.filter(Boolean) as DesignItem[];
+				setProjects(loaded);
+			} catch (e) {
+				console.warn("Failed to load projects:", e);
+			}
+		};
+		loadProjects();
+	}, []);
 	const handleUploadComplete = async (base64Image: string) => {
 		const newId = Date.now().toString();
 		const name = `Residence ${newId}`;

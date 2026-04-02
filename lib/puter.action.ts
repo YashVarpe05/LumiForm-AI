@@ -30,6 +30,7 @@ const ensureDataUrl = (image: string): string => {
 
 export const createProject = async ({
 	item,
+	visibility,
 }: CreateProjectParams): Promise<DesignItem | null | undefined> => {
 	const projectId = item.id;
 
@@ -94,6 +95,7 @@ export const createProject = async ({
 		...rest,
 		sourceImage: resolvedSource,
 		renderedImage: resolvedRender,
+		isPublic: visibility === "public",
 	};
 
 	try {

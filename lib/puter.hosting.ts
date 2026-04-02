@@ -9,7 +9,6 @@ import {
 	isHostedUrl,
 } from "./utils";
 
-
 export const getOrCreateHostingConfig =
 	async (): Promise<HostingConfig | null> => {
 		const existing = (await puter.kv.get(
@@ -22,7 +21,9 @@ export const getOrCreateHostingConfig =
 		const subdomain = createHostingSlug();
 		try {
 			const created = await puter.hosting.create(subdomain, ".");
-			return { subdomain: created.subdomain };
+			const record = { subdomain: created.subdomain };
+			await puter.kv.set(HOSTING_CONFIG_KEY, record);
+			return record;
 		} catch (e) {
 			console.warn(`Could not find subdomain: ${e}`);
 			return null;
