@@ -12,9 +12,10 @@ import {
 
 export const getOrCreateHostingConfig =
 	async (): Promise<HostingConfig | null> => {
-		const existing = (await puter.kv.get(
-			HOSTING_CONFIG_KEY,
-		)) as HostingConfig | null;
+		const raw = await puter.kv.get(HOSTING_CONFIG_KEY);
+		const existing: HostingConfig | null = raw
+			? JSON.parse(raw as string)
+			: null;
 		if (existing?.subdomain)
 			return {
 				subdomain: existing.subdomain,
