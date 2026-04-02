@@ -2,11 +2,11 @@ import { CheckCircle2, ImageIcon, UploadIcon } from "lucide-react";
 import React, { useEffect, useRef, useState } from "react";
 import { useOutletContext } from "react-router";
 import {
-	MAX_FILE_SIZE_BYTES,
-	MAX_FILE_SIZE_MB,
 	PROGRESS_INTERVAL_MS,
 	PROGRESS_STEP,
 	REDIRECT_DELAY_MS,
+	MAX_FILE_SIZE_BYTES,
+	MAX_FILE_SIZE_MB,
 } from "lib/constants";
 
 type UploadProps = {
@@ -44,14 +44,20 @@ const Upload = ({ onComplete }: UploadProps) => {
 	const processFile = (selectedFile: File) => {
 		if (!isSignedIn) return;
 
-		if (selectedFile.size > MAX_FILE_SIZE_BYTES) {
-			setError(`File exceeds the ${MAX_FILE_SIZE_MB} MB size limit.`);
-			return;
-		}
+		const processFile = (selectedFile: File) => {
+			if (!isSignedIn) return;
 
-		setError(null);
-		clearTimers();
-		setFile(selectedFile);
+			clearTimers();
+
+			if (selectedFile.size > MAX_FILE_SIZE_BYTES) {
+				setError(`File is too large. Maximum size is ${MAX_FILE_SIZE_MB}MB.`);
+				setFile(null);
+				setProgress(0);
+				return;
+			}
+
+			setError(null);
+			setFile(selectedFile);		setFile(selectedFile);
 		setProgress(0);
 
 		const base64Promise = new Promise<string>((resolve, reject) => {
@@ -83,7 +89,6 @@ const Upload = ({ onComplete }: UploadProps) => {
 
 					base64Promise
 						.then((base64Data) => {
-							setProgress(100);
 							completeTimeoutRef.current = window.setTimeout(() => {
 								onComplete?.(base64Data);
 							}, REDIRECT_DELAY_MS);
@@ -92,8 +97,6 @@ const Upload = ({ onComplete }: UploadProps) => {
 							setFile(null);
 							setProgress(0);
 						});
-
-					return 99;
 				}
 
 				return nextProgress;
@@ -124,6 +127,7 @@ const Upload = ({ onComplete }: UploadProps) => {
 		if (!isSignedIn) return;
 
 		setIsDragging(false);
+		setError(null);
 		const droppedFiles = event.dataTransfer.files;
 		if (droppedFiles.length > 0) {
 			processFile(droppedFiles[0]);
@@ -133,6 +137,7 @@ const Upload = ({ onComplete }: UploadProps) => {
 	const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
 		if (!isSignedIn) return;
 
+		setError(null);
 		const selectedFiles = event.target.files;
 		if (selectedFiles && selectedFiles.length > 0) {
 			processFile(selectedFiles[0]);
@@ -165,8 +170,13 @@ const Upload = ({ onComplete }: UploadProps) => {
 								? "Click to upload or just drag and drop"
 								: "Sign in or sign up with Puter to upload"}
 						</p>
-					<p className="help">Maximum file size {MAX_FILE_SIZE_MB} MB.</p>
-					{error && <p className="help" style={{ color: "red" }}>{error}</p>}
+						{error ? (
+							<p className="help" style={{ color: "#ef4444", fontWeight: "600" }}>
+								{error}
+							</p>
+						) : (
+							<p className="help">Maximum file size {MAX_FILE_SIZE_MB} MB.</p>
+						)}
 					</div>
 				</div>
 			) : (
