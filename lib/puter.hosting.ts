@@ -12,9 +12,15 @@ import {
 export const getOrCreateHostingConfig =
 	async (): Promise<HostingConfig | null> => {
 		const raw = await puter.kv.get(HOSTING_CONFIG_KEY);
-		const existing: HostingConfig | null = raw
-			? JSON.parse(raw as string)
-			: null;
+		let existing: HostingConfig | null = null;
+		try {
+			existing =
+				typeof raw === "string"
+					? (JSON.parse(raw) as HostingConfig)
+					: (raw as HostingConfig | null);
+		} catch (e) {
+			console.warn("Failed to parse hosting config from KV:", e);
+		}
 		if (existing?.subdomain)
 			return {
 				subdomain: existing.subdomain,

@@ -1,18 +1,26 @@
 import React, { useEffect, useRef, useState } from "react";
-import { useLocation, useNavigate, useParams } from "react-router";
+import {
+	useLocation,
+	useNavigate,
+	useOutletContext,
+	useParams,
+} from "react-router";
 import puter from "@heyputer/puter.js";
 import { generate3dView } from "lib/ai.action";
 import { Box, Download, RefreshCcw, Share2, X } from "lucide-react";
 import Button from "components/ui/Button";
+import { createProject, getProjectById } from "lib/puter.action";
 
 const VisualizerId = () => {
 	const { id } = useParams();
 	const navigate = useNavigate();
 	const location = useLocation();
-
+	const { userId } = useOutletContext<AuthContext>();
 	const [projectName, setProjectName] = useState<string>(
 		location.state?.name || "Untitled Project",
 	);
+	const [project, setProject] = useState<DesignItem | null>(null);
+	const [isProjectLoading, setIsProjectLoading] = useState(true);
 	const [sourceImage, setSourceImage] = useState<string | null>(null);
 	const [currentImage, setCurrentImage] = useState<string | null>(null);
 	const [isProcessing, setIsProcessing] = useState(false);
@@ -21,70 +29,83 @@ const VisualizerId = () => {
 
 	const handleBack = () => navigate("/");
 
-	// Load project data from KV / localStorage
+	// 1. Initial Load: Fetch project by ID from Puter Worker
 	useEffect(() => {
-		const loadProject = async () => {
+		let isMounted = true;
+		const loadData = async () => {
 			if (!id) {
+				setIsProjectLoading(false);
 				setIsLoading(false);
 				return;
 			}
 
-			// Try Puter KV first
+			setIsProjectLoading(true);
+			setIsLoading(true);
+
 			try {
-				const kvData = await puter.kv.get(`project:${id}`);
-				if (kvData) {
-					const parsed = JSON.parse(kvData as string) as DesignItem;
-					setSourceImage(parsed.sourceImage);
-					setProjectName((prev) =>
-						prev === "Untitled Project" && parsed.name
-							? parsed.name
-							: prev,
-					);
-					if (parsed.renderedImage) {
-						setCurrentImage(parsed.renderedImage);
+				// Use the centralized action to fetch from worker
+				const fetchedProject = await getProjectById({ id });
+
+				if (!isMounted) return;
+
+				if (fetchedProject) {
+					setProject(fetchedProject);
+					setProjectName(fetchedProject.name || `Residence ${id}`);
+					setSourceImage(fetchedProject.sourceImage);
+					if (fetchedProject.renderedImage) {
+						setCurrentImage(fetchedProject.renderedImage);
 					}
-					setIsLoading(false);
-					return;
+				} else {
+					// Fallback to localStorage if worker returns null (e.g., project not synced yet)
+					const localImage = localStorage.getItem(`visualizer:image:${id}`);
+					if (localImage) {
+						setSourceImage(localImage);
+						setProjectName(`Residence ${id}`);
+					}
 				}
 			} catch (e) {
-				console.warn("Failed to fetch project from KV:", e);
+				console.error("Failed to load project:", e);
+			} finally {
+				if (isMounted) {
+					setIsProjectLoading(false);
+					setIsLoading(false);
+				}
 			}
-
-			// Fallback to localStorage
-			const localImage = localStorage.getItem(`visualizer:image:${id}`);
-			if (localImage) {
-				setSourceImage(localImage);
-				setProjectName((prev) =>
-					prev === "Untitled Project" ? `Residence ${id}` : prev,
-				);
-			}
-			setIsLoading(false);
 		};
 
-		loadProject();
+		loadData();
+		return () => {
+			isMounted = false;
+		};
 	}, [id]);
 
-	// Trigger generation once we have the source image
-	useEffect(() => {
-		if (!sourceImage || hasTriggeredGeneration.current || currentImage) return;
-		hasTriggeredGeneration.current = true;
-
-		const runGeneration = async () => {
-			try {
-				setIsProcessing(true);
-				const result = await generate3dView({ sourceImage });
-				if (result.renderedImage) {
-					setCurrentImage(result.renderedImage);
+	const runGeneration = async (item: DesignItem) => {
+		if (!id || !item.sourceImage || isProcessing) return;
+		try {
+			setIsProcessing(true);
+			const result = await generate3dView({ sourceImage: item.sourceImage });
+			if (result.renderedImage) {
+				setCurrentImage(result.renderedImage);
+				const updatedItem: DesignItem = {
+					...item,
+					renderedImage: result.renderedImage,
+					renderedPath: result.renderedPath,
+					timestamp: Date.now(),
+					ownerId: item.ownerId ?? userId ?? null,
+					isPublic: item.isPublic ?? false,
+				};
+				const saved = await createProject({ item: updatedItem });
+				if (saved) {
+					setProject(saved);
+					setCurrentImage(saved.renderedImage || result.renderedImage);
 				}
-			} catch (e) {
-				console.warn("Failed to generate 3d view:", e);
-			} finally {
-				setIsProcessing(false);
 			}
-		};
-
-		runGeneration();
-	}, [sourceImage, currentImage]);
+		} catch (e) {
+			console.warn("Failed to generate 3d view:", e);
+		} finally {
+			setIsProcessing(false);
+		}
+	};
 
 	const handleRegenerate = async () => {
 		if (!sourceImage) return;
@@ -100,6 +121,32 @@ const VisualizerId = () => {
 			setIsProcessing(false);
 		}
 	};
+
+	// 2. Generation Trigger: Run once the project/source is loaded if no render exists
+	useEffect(() => {
+		if (
+			isProjectLoading ||
+			isLoading ||
+			hasTriggeredGeneration.current ||
+			currentImage
+		)
+			return;
+
+		if (project) {
+			hasTriggeredGeneration.current = true;
+			void runGeneration(project);
+		} else if (sourceImage && id) {
+			// If we only have sourceImage (from localStorage), create a temp item
+			const tempItem: DesignItem = {
+				id,
+				sourceImage,
+				timestamp: Date.now(),
+				name: projectName,
+			};
+			hasTriggeredGeneration.current = true;
+			void runGeneration(tempItem);
+		}
+	}, [project, sourceImage, id, isProjectLoading, isLoading, currentImage]);
 
 	return (
 		<div className="visualizer">
@@ -117,7 +164,7 @@ const VisualizerId = () => {
 					<div className="panel-header">
 						<div className="panel-meta">
 							<p>Project</p>
-							<h2>{projectName}</h2>
+							<h2>{project?.name || `Residence ${id}`}</h2>
 							<p className="note">Created by you</p>
 						</div>
 						<div className="panel-actions">
@@ -154,9 +201,9 @@ const VisualizerId = () => {
 							<img src={currentImage} alt="AI Render" className="render-img" />
 						) : (
 							<div className="render-placeholder">
-								{sourceImage && (
+								{project?.sourceImage && (
 									<img
-										src={sourceImage}
+										src={project?.sourceImage}
 										alt="Original"
 										className="render-fallback"
 									/>
@@ -182,4 +229,3 @@ const VisualizerId = () => {
 };
 
 export default VisualizerId;
-
