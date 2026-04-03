@@ -10,6 +10,10 @@ import { generate3dView } from "lib/ai.action";
 import { Box, Download, RefreshCcw, Share2, X } from "lucide-react";
 import Button from "components/ui/Button";
 import { createProject, getProjectById } from "lib/puter.action";
+import {
+	ReactCompareSlider,
+	ReactCompareSliderImage,
+} from "react-compare-slider";
 
 const VisualizerId = () => {
 	const { id } = useParams();
@@ -122,6 +126,30 @@ const VisualizerId = () => {
 		}
 	};
 
+	const handleExport = async () => {
+		if (!currentImage) return;
+		try {
+			const response = await fetch(currentImage);
+			const blob = await response.blob();
+			const mimeToExt: Record<string, string> = {
+				"image/png": "png",
+				"image/jpeg": "jpg",
+				"image/webp": "webp",
+			};
+			const ext = mimeToExt[blob.type] || "png";
+			const url = URL.createObjectURL(blob);
+			const a = document.createElement("a");
+			a.href = url;
+			a.download = `${project?.name || `Residence_${id}`}.${ext}`;
+			document.body.appendChild(a);
+			a.click();
+			document.body.removeChild(a);
+			URL.revokeObjectURL(url);
+		} catch (e) {
+			console.error("Failed to export image:", e);
+		}
+	};
+
 	// 2. Generation Trigger: Run once the project/source is loaded if no render exists
 	useEffect(() => {
 		if (
@@ -179,7 +207,7 @@ const VisualizerId = () => {
 							</Button>
 							<Button
 								size="sm"
-								onClick={() => {}}
+								onClick={handleExport}
 								className="export"
 								disabled={!currentImage}
 							>
@@ -219,6 +247,47 @@ const VisualizerId = () => {
 										Generating your 3D visualization
 									</span>
 								</div>
+							</div>
+						)}
+					</div>
+				</div>
+				<div className="panel compare">
+					<div className="panel-header">
+						<div className="panel-meta">
+							<p>Comparison</p>
+							<h3>Before and After</h3>
+						</div>
+						<div className="hint">Drag to Compare</div>
+					</div>
+					<div className="compare-stage">
+						{project?.sourceImage && currentImage ? (
+							<ReactCompareSlider
+								defaultValue={50}
+								style={{ width: "100%", height: "auto" }}
+								itemOne={
+									<ReactCompareSliderImage
+										src={project?.sourceImage}
+										alt="before"
+										className="compare-img"
+									/>
+								}
+								itemTwo={
+									<ReactCompareSliderImage
+										src={currentImage || project?.renderedImage}
+										alt="after"
+										className="compare-img"
+									/>
+								}
+							/>
+						) : (
+							<div className="compare-fallback">
+								{project?.sourceImage && (
+									<img
+										src={project.sourceImage}
+										alt="Before"
+										className="compare-img"
+									/>
+								)}
 							</div>
 						)}
 					</div>
