@@ -131,10 +131,16 @@ const VisualizerId = () => {
 		try {
 			const response = await fetch(currentImage);
 			const blob = await response.blob();
+			const mimeToExt: Record<string, string> = {
+				"image/png": "png",
+				"image/jpeg": "jpg",
+				"image/webp": "webp",
+			};
+			const ext = mimeToExt[blob.type] || "png";
 			const url = URL.createObjectURL(blob);
 			const a = document.createElement("a");
 			a.href = url;
-			a.download = `${project?.name || `Residence_${id}`}.png`;
+			a.download = `${project?.name || `Residence_${id}`}.${ext}`;
 			document.body.appendChild(a);
 			a.click();
 			document.body.removeChild(a);
