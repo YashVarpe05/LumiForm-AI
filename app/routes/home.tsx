@@ -85,10 +85,10 @@ export default function Home() {
 	useEffect(() => {
 		const fetchProject = async () => {
 			const items = await getProjects();
-			setProjects(items);
+			if (items) setProjects(items);
 		};
 		fetchProject();
-	});
+	}, []);
 
 	return (
 		<div className="home">
