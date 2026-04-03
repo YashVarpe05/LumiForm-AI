@@ -103,6 +103,11 @@ export const createProject = async ({
 	};
 
 	try {
+		if (!PUTER_WORKER_URL) {
+			console.warn("Missing PUTER_WORKER_URL; skipping project save.");
+			return payload;
+		}
+
 		// Store project in Puter KV
 		const response = await puter.workers.exec(
 			`${PUTER_WORKER_URL}/api/projects/save`,
